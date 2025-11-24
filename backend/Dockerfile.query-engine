@@ -1,0 +1,25 @@
+# Stage 1: Build the Go executable
+FROM golang:1.24.2-alpine AS builder
+
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy all Go source code
+COPY . .
+
+# Build the executable (e.g., for the query-engine command)
+# CGO_ENABLED=0 creates a statically linked binary
+RUN CGO_ENABLED=0 go build -o /app/query-engine ./cmd/query-engine
+
+# Stage 2: Create the final minimal image
+FROM alpine:latest
+WORKDIR /root/
+# Copy the executable from the builder stage
+COPY --from=builder /app/query-engine .
+
+# Expose the port defined in docker-compose
+EXPOSE 8080
+
+# Command to run the service
+ENTRYPOINT ["/root/query-engine"]
